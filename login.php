@@ -7,6 +7,9 @@
 <body>
     <div class="form-box">
         <h1>Login</h1>
+        <?php if (isset($_GET['error'])) : ?>
+            <p style="color: red;">Invalid username or password!</p>
+        <?php endif; ?>
         <form action="auth.php" method="POST">
             <input type="text" name="username" placeholder="Username" required>
             <input type="password" name="password" placeholder="Password" required>
