@@ -9,7 +9,6 @@ $username = $_POST['username'];
 $email = $_POST['email'];
 $password = $_POST['password'];
 
-// Check if email exists
 $check_email = $conn->prepare("SELECT id FROM users WHERE email = ?");
 $check_email->bind_param("s", $email);
 $check_email->execute();
