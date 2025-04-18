@@ -1,44 +1,58 @@
 <?php
-$conn = new mysqli("localhost", "root", "", "food_donation_db");
+require_once 'db_connect.php';
 
-if ($conn->connect_error) {
-    die("Connection failed: " . $conn->connect_error);
+if ($_SERVER['REQUEST_METHOD'] == 'POST') {
+    $first_name = $_POST['first_name'];
+    $last_name = $_POST['last_name'];
+    $email = $_POST['email'];
+    $password = password_hash($_POST['password'], PASSWORD_DEFAULT);
+    $role = $_POST['role'];
+    $graduation_year = $_POST['graduation_year'];
+    
+    // Validate input
+    $errors = [];
+    
+    if (empty($first_name) || empty($last_name)) {
+        $errors[] = "Name fields cannot be empty";
+    }
+    
+    if (empty($email) || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        $errors[] = "Please enter a valid email address";
+    }
+    
+    if (empty($password)) {
+        $errors[] = "Password cannot be empty";
+    }
+    
+    if (!isset($_POST['terms'])) {
+        $errors[] = "You must agree to the Terms of Service";
+    }
+    
+    // Check if email already exists
+    $check_sql = "SELECT COUNT(*) FROM users WHERE email = ?";
+    $check_stmt = $pdo->prepare($check_sql);
+    $check_stmt->execute([$email]);
+    
+    if ($check_stmt->fetchColumn() > 0) {
+        $errors[] = "Email already exists. Please use a different email or login.";
+    }
+    
+    if (!empty($errors)) {
+        header("Location: register.php?error=" . urlencode(implode(", ", $errors)));
+        exit;
+    }
+    
+    // Insert new user
+    try {
+        $sql = "INSERT INTO users (first_name, last_name, email, password, role, graduation_year) VALUES (?, ?, ?, ?, ?, ?)";
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute([$first_name, $last_name, $email, $password, $role, $graduation_year]);
+        
+        header("Location: login.php?success=Registration successful! Please login.");
+        exit;
+    } catch (PDOException $e) {
+        header("Location: register.php?error=Registration failed: " . urlencode($e->getMessage()));
+        exit;
+    }
 }
-
-$username = $_POST['username'];
-$email = $_POST['email'];
-$password = $_POST['password'];
-
-$check_email = $conn->prepare("SELECT id FROM users WHERE email = ?");
-$check_email->bind_param("s", $email);
-$check_email->execute();
-$check_email->store_result();
-
-if ($check_email->num_rows > 0) {
-    header("Location: register.php?error=email_exists");
-    exit();
-}
-
-$check_username = $conn->prepare("SELECT id FROM users WHERE username = ?");
-$check_username->bind_param("s", $username);
-$check_username->execute();
-$check_username->store_result();
-
-if ($check_username->num_rows > 0) {
-    header("Location: register.php?error=username_exists");
-    exit();
-}
-
-$hashed_password = password_hash($password, PASSWORD_DEFAULT);
-$stmt = $conn->prepare("INSERT INTO users (username, email, password) VALUES (?, ?, ?)");
-$stmt->bind_param("sss", $username, $email, $hashed_password);
-
-if ($stmt->execute()) {
-    header("Location: login.php?success=1");
-} else {
-    header("Location: register.php?error=db_error");
-}
-
-$stmt->close();
-$conn->close();
 ?>
