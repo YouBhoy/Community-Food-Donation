@@ -5,8 +5,13 @@ $username = 'root';
 $password = '';     
 
 try {
-    $pdo = new PDO("mysql:host=$host;dbname=$dbname", $username, $password);
-    $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+    // Enable buffered queries by default
+    $options = [
+        PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+        PDO::MYSQL_ATTR_USE_BUFFERED_QUERY => true
+    ];
+    
+    $pdo = new PDO("mysql:host=$host;dbname=$dbname", $username, $password, $options);
     
     // For mysqli compatibility (used in some files)
     $mysqli = new mysqli($host, $username, $password, $dbname);

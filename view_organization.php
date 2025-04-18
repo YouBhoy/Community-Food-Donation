@@ -4,31 +4,29 @@ require_once 'db_connect.php';
 $id = isset($_GET['id']) ? (int)$_GET['id'] : 0;
 $user_id = isset($_SESSION['user_id']) ? $_SESSION['user_id'] : 0;
 
-try {
-    // Get organization details
-    $stmt = $pdo->prepare("SELECT * FROM organizations WHERE id = ?");
-    $stmt->execute([$id]);
-    $org = $stmt->fetch(PDO::FETCH_ASSOC);
-    
-    if (!$org) {
-        header("Location: organizations.php");
-        exit;
-    }
-    
-    // Check if user is following this organization
-    $isFollowing = false;
-    if ($user_id > 0) {
-        $follow_stmt = $pdo->prepare("SELECT COUNT(*) FROM user_organization_follows WHERE user_id = ? AND organization_id = ?");
-        $follow_stmt->execute([$user_id, $id]);
-        $isFollowing = ($follow_stmt->fetchColumn() > 0);
-    }
-    
-    $firstLetter = substr($org['name'], 0, 1);
-    $category = $org['category'] ?? 'Academic';
-    
-} catch (Exception $e) {
-    $error_message = "Database error: " . $e->getMessage();
+// Get organization details using stored procedure
+$stmt = $pdo->prepare("CALL sp_get_organization_by_id(?)");
+$stmt->execute([$id]);
+$org = $stmt->fetch(PDO::FETCH_ASSOC);
+
+if (!$org) {
+    header("Location: organizations.php");
+    exit;
 }
+
+// Close the cursor to allow for next query
+$stmt->closeCursor();
+
+// Check if user is following this organization using stored procedure
+$isFollowing = false;
+if ($user_id > 0) {
+    $follow_stmt = $pdo->prepare("CALL sp_check_user_following(?, ?)");
+    $follow_stmt->execute([$user_id, $id]);
+    $isFollowing = ($follow_stmt->fetchColumn() > 0);
+}
+
+$firstLetter = substr($org['name'], 0, 1);
+$category = $org['category'] ?? 'Academic';
 
 include 'header.php';
 ?>
@@ -40,81 +38,81 @@ include 'header.php';
         </a>
     </div>
 
-    <?php if (isset($error_message)): ?>
-        <div class="alert alert-danger">
-            <?= htmlspecialchars($error_message) ?>
-        </div>
-    <?php else: ?>
-        <div class="card shadow-sm">
-            <div class="card-body p-4">
-                <div class="row">
-                    <div class="col-md-8">
-                        <div class="d-flex align-items-center mb-4">
-                            <div class="org-avatar me-3" style="width: 64px; height: 64px; font-size: 1.75rem;">
-                                <?= $firstLetter ?>
-                            </div>
-                            <div>
-                                <h2 class="mb-1"><?= htmlspecialchars($org['name']) ?></h2>
-                                <span class="badge bg-light text-dark"><?= htmlspecialchars($category) ?></span>
-                            </div>
+    <div class="card shadow-sm">
+        <div class="card-body p-4">
+            <div class="row">
+                <div class="col-md-8">
+                    <div class="d-flex align-items-center mb-4">
+                        <div class="org-avatar me-3" style="width: 64px; height: 64px; font-size: 1.75rem;">
+                            <?= $firstLetter ?>
                         </div>
-
-                        <div class="mb-4">
-                            <h5 class="mb-3">Description</h5>
-                            <p><?= nl2br(htmlspecialchars($org['description'])) ?></p>
+                        <div>
+                            <h2 class="mb-1"><?= htmlspecialchars($org['name']) ?></h2>
+                            <span class="badge bg-light text-dark"><?= htmlspecialchars($category) ?></span>
                         </div>
-
-                        <?php if (!empty($org['sub_organization'])): ?>
-                        <div class="mb-4">
-                            <h5 class="mb-3">Sub-organizations</h5>
-                            <p><?= nl2br(htmlspecialchars($org['sub_organization'])) ?></p>
-                        </div>
-                        <?php endif; ?>
                     </div>
 
-                    <div class="col-md-4">
-                        <div class="card mb-4">
-                            <div class="card-body p-4">
-                                <h5 class="mb-3">Organization Info</h5>
-                                
-                                <div class="d-flex align-items-center mb-3">
-                                    <i class="fas fa-user-friends text-muted me-3"></i>
-                                    <div>
-                                        <p class="mb-0 fw-medium"><?= htmlspecialchars($org['members']) ?> members</p>
-                                    </div>
+                    <div class="mb-4">
+                        <h5 class="mb-3">Description</h5>
+                        <p><?= nl2br(htmlspecialchars($org['description'])) ?></p>
+                    </div>
+
+                    <?php if (!empty($org['sub_organization'])): ?>
+                    <div class="mb-4">
+                        <h5 class="mb-3">Sub-organizations</h5>
+                        <p><?= nl2br(htmlspecialchars($org['sub_organization'])) ?></p>
+                    </div>
+                    <?php endif; ?>
+                </div>
+
+                <div class="col-md-4">
+                    <div class="card mb-4">
+                        <div class="card-body p-4">
+                            <h5 class="mb-3">Organization Info</h5>
+                            
+                            <div class="d-flex align-items-center mb-3">
+                                <i class="fas fa-user-friends text-muted me-3"></i>
+                                <div>
+                                    <p class="mb-0 fw-medium"><?= htmlspecialchars($org['members']) ?> members</p>
                                 </div>
-                                
-                                <button 
-                                    class="btn <?= $isFollowing ? 'btn-primary' : 'btn-outline-primary' ?> follow-btn w-100" 
-                                    data-org-id="<?= $org['id'] ?>"
-                                    data-following="<?= $isFollowing ? '1' : '0' ?>">
-                                    <?= $isFollowing ? 'Followed' : 'Follow' ?>
-                                </button>
                             </div>
+                            
+                            <button 
+                                class="btn <?= $isFollowing ? 'btn-primary' : 'btn-outline-primary' ?> follow-btn w-100" 
+                                data-org-id="<?= $org['id'] ?>"
+                                data-following="<?= $isFollowing ? '1' : '0' ?>">
+                                <?= $isFollowing ? 'Followed' : 'Follow' ?>
+                            </button>
+                            
+                            <?php if (isLoggedIn()): ?>
+                            <a href="manage_organization.php?id=<?= $org['id'] ?>" class="btn btn-outline-secondary w-100 mt-2">
+                                <i class="fas fa-edit me-2"></i>Edit Organization
+                            </a>
+                            <?php endif; ?>
                         </div>
-                        
-                        <div class="card">
-                            <div class="card-body p-4">
-                                <h5 class="mb-3">Contact</h5>
-                                <p class="mb-2">
-                                    <i class="fas fa-envelope text-muted me-2"></i>
-                                    <a href="mailto:<?= strtolower(str_replace(' ', '', $org['name'])) ?>@example.com" class="text-decoration-none">
-                                        <?= strtolower(str_replace(' ', '', $org['name'])) ?>@example.com
-                                    </a>
-                                </p>
-                                <p class="mb-0">
-                                    <i class="fas fa-globe text-muted me-2"></i>
-                                    <a href="#" class="text-decoration-none">
-                                        connecthub.com/<?= strtolower(str_replace(' ', '-', $org['name'])) ?>
-                                    </a>
-                                </p>
-                            </div>
+                    </div>
+                    
+                    <div class="card">
+                        <div class="card-body p-4">
+                            <h5 class="mb-3">Contact</h5>
+                            <p class="mb-2">
+                                <i class="fas fa-envelope text-muted me-2"></i>
+                                <a href="mailto:<?= strtolower(str_replace(' ', '', $org['name'])) ?>@example.com" class="text-decoration-none">
+                                    <?= strtolower(str_replace(' ', '', $org['name'])) ?>@example.com
+                                </a>
+                            </p>
+                            <p class="mb-0">
+                                <i class="fas fa-globe text-muted me-2"></i>
+                                <a href="#" class="text-decoration-none">
+                                    connecthub.com/<?= strtolower(str_replace(' ', '-', $org['name'])) ?>
+                                </a>
+                            </p>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
-    <?php endif; ?>
+    </div>
 </div>
 
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>

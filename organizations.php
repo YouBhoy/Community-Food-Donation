@@ -7,58 +7,30 @@ $search_query = isset($_GET['search']) ? trim($_GET['search']) : '';
 $category = isset($_GET['category']) ? $_GET['category'] : 'All Categories';
 $sort_by = isset($_GET['sort_by']) ? $_GET['sort_by'] : 'Name';
 
-try {
-    // Get organizations based on filters
-    $sql = "SELECT * FROM organizations WHERE 1=1";
-    $params = [];
-    
-    if (!empty($search_query)) {
-        $sql .= " AND (name LIKE ? OR description LIKE ?)";
-        $search_param = "%" . $search_query . "%";
-        $params[] = $search_param;
-        $params[] = $search_param;
-    }
-    
-    if ($category !== 'All Categories') {
-        $sql .= " AND category = ?";
-        $params[] = $category;
-    }
-    
-    switch ($sort_by) {
-        case 'Members':
-            $sql .= " ORDER BY members DESC";
-            break;
-        case 'Newest':
-            $sql .= " ORDER BY created_at DESC";
-            break;
-        case 'Name':
-        default:
-            $sql .= " ORDER BY name ASC";
-            break;
-    }
-    
-    $stmt = $pdo->prepare($sql);
-    
-    foreach ($params as $i => $param) {
-        $stmt->bindValue($i + 1, $param);
-    }
-    
-    $stmt->execute();
-    $organizations = $stmt->fetchAll(PDO::FETCH_ASSOC);
-    
-    // Get all categories
-    $categories = [
-        'Academic',
-        'Arts and Culture',
-        'Community Outreach',
-        'Debate',
-        'Entrepreneurship',
-        'Environmental',
-        'Health and Wellness'
-    ];
-    
-} catch (Exception $e) {
-    $error_message = "Database error: " . $e->getMessage();
+// Get organizations based on filters using stored procedure
+$stmt = $pdo->prepare("CALL sp_get_organizations_filtered(?, ?, ?)");
+$stmt->execute([$search_query, $category, $sort_by]);
+$organizations = $stmt->fetchAll(PDO::FETCH_ASSOC);
+$stmt->closeCursor(); // Important: Close the cursor after fetching all results
+
+// Get all categories
+$categories = [
+    'Academic',
+    'Arts and Culture',
+    'Community Outreach',
+    'Debate',
+    'Entrepreneurship',
+    'Environmental',
+    'Health and Wellness'
+];
+
+// Pre-fetch all user follows for better performance
+$user_follows = [];
+if ($user_id > 0) {
+    $follow_stmt = $pdo->prepare("SELECT organization_id FROM user_organization_follows WHERE user_id = ?");
+    $follow_stmt->execute([$user_id]);
+    $follows = $follow_stmt->fetchAll(PDO::FETCH_COLUMN);
+    $user_follows = array_flip($follows); // Convert to associative array for O(1) lookups
 }
 
 include 'header.php';
@@ -72,6 +44,32 @@ include 'header.php';
 </div>
 
 <div class="container my-5">
+    <!-- Display success/error messages if they exist in session -->
+    <?php if (isset($_SESSION['success_message'])): ?>
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            <?= htmlspecialchars($_SESSION['success_message']) ?>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+        <?php unset($_SESSION['success_message']); ?>
+    <?php endif; ?>
+    
+    <?php if (isset($_SESSION['error_message'])): ?>
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <?= htmlspecialchars($_SESSION['error_message']) ?>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+        <?php unset($_SESSION['error_message']); ?>
+    <?php endif; ?>
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="mb-0">Browse Organizations</h2>
+        <?php if (isLoggedIn()): ?>
+            <a href="create_organization.php" class="btn btn-primary">
+                <i class="fas fa-plus me-2"></i>Create Organization
+            </a>
+        <?php endif; ?>
+    </div>
+
     <form id="search-form" method="GET" action="organizations.php">
         <div class="row mb-4 align-items-center">
             <div class="col-md-3">
@@ -132,13 +130,8 @@ include 'header.php';
         <?php 
         if (!empty($organizations)):
             foreach ($organizations as $org): 
-                // Check if user is following this organization
-                $isFollowing = false;
-                if ($user_id > 0) {
-                    $follow_stmt = $pdo->prepare("SELECT COUNT(*) FROM user_organization_follows WHERE user_id = ? AND organization_id = ?");
-                    $follow_stmt->execute([$user_id, $org['id']]);
-                    $isFollowing = ($follow_stmt->fetchColumn() > 0);
-                }
+                // Check if user is following this organization using pre-fetched data
+                $isFollowing = isset($user_follows[$org['id']]);
                 
                 $firstLetter = substr($org['name'], 0, 1);
                 $category = $org['category'] ?? 'Academic';
@@ -189,6 +182,13 @@ include 'header.php';
                 <?php if (!empty($search_query)): ?>
                     <p class="text-muted">Try different keywords or browse all organizations</p>
                     <a href="organizations.php" class="btn btn-primary mt-2">View All Organizations</a>
+                <?php else: ?>
+                    <p class="text-muted">Be the first to create an organization!</p>
+                    <?php if (isLoggedIn()): ?>
+                        <a href="create_organization.php" class="btn btn-primary mt-2">
+                            <i class="fas fa-plus me-2"></i>Create Organization
+                        </a>
+                    <?php endif; ?>
                 <?php endif; ?>
             </div>
         <?php endif; ?>
