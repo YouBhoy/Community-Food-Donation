@@ -30,7 +30,7 @@ include 'header.php';
               <?php if(isset($event['event_time'])): ?>
                 <p class="text-muted"><?= date('h:i A', strtotime($event['event_time'])) ?></p>
               <?php endif; ?>
-              <a href="event_details.php?id=<?= $event['event_id'] ?>" class="btn btn-primary">View Details</a>
+              <a href="event_details.php?id=<?= $event['id'] ?>" class="btn btn-primary">View Details</a>
             </div>
           </div>
         </div>

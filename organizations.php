@@ -7,60 +7,10 @@ $search_query = isset($_GET['search']) ? trim($_GET['search']) : '';
 $category = isset($_GET['category']) ? $_GET['category'] : 'All Categories';
 $sort_by = isset($_GET['sort_by']) ? $_GET['sort_by'] : 'Name';
 
-$where_clauses = [];
-$params = [];
-
-if (!empty($search_query)) {
-    $where_clauses[] = "(name LIKE ? OR description LIKE ?)";
-    $search_param = "%" . $search_query . "%";
-    $params[] = $search_param;
-    $params[] = $search_param;
-}
-
-if ($category != 'All Categories') {
-    $where_clauses[] = "category = ?";
-    $params[] = $category;
-}
-
-$sql = "SELECT * FROM organizations";
-if (!empty($where_clauses)) {
-    $sql .= " WHERE " . implode(" AND ", $where_clauses);
-}
-
-if ($sort_by == 'Name') {
-    $sql .= " ORDER BY name ASC";
-} elseif ($sort_by == 'Members') {
-    $sql .= " ORDER BY members DESC";
-} elseif ($sort_by == 'Newest') {
-    $sql .= " ORDER BY created_at DESC";
-} else {
-    $sql .= " ORDER BY name ASC";
-}
-
-$stmt = $pdo->prepare($sql);
-foreach ($params as $i => $param) {
-    $stmt->bindValue($i + 1, $param);
-}
-$stmt->execute();
+$stmt = $pdo->prepare("CALL sp_get_organizations_with_follow_status(?, ?, ?, ?)");
+$stmt->execute([$search_query, $category, $sort_by, $user_id]);
 $organizations = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-$categories = [
-    'Academic',
-    'Arts and Culture',
-    'Community Outreach',
-    'Debate',
-    'Entrepreneurship',
-    'Environmental',
-    'Health and Wellness'
-];
-
-$user_follows = [];
-if ($user_id > 0) {
-    $follow_stmt = $pdo->prepare("SELECT organization_id FROM user_organization_follows WHERE user_id = ?");
-    $follow_stmt->execute([$user_id]);
-    $follows = $follow_stmt->fetchAll(PDO::FETCH_COLUMN);
-    $user_follows = array_flip($follows); 
-}
+$stmt->closeCursor();
 
 include 'header.php';
 ?>
@@ -158,8 +108,7 @@ include 'header.php';
         <?php 
         if (!empty($organizations)):
             foreach ($organizations as $org): 
-                $isFollowing = isset($user_follows[$org['id']]);
-                
+                $isFollowing = ($org['is_following'] == 1);                
                 $firstLetter = substr($org['name'], 0, 1);
                 $category = $org['category'] ?? 'Academic';
         ?>

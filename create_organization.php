@@ -10,9 +10,10 @@ $error_message = '';
 
 // Get all categories from the database
 try {
-    // Direct SQL query instead of stored procedure
-    $stmt = $pdo->query("SELECT DISTINCT category FROM organizations ORDER BY category");
+    $stmt = $pdo->prepare("CALL sp_get_organization_categories()");
+    $stmt->execute();
     $categories = $stmt->fetchAll(PDO::FETCH_COLUMN);
+    $stmt->closeCursor();
     
     // If no categories found, use default list
     if (empty($categories)) {
@@ -59,29 +60,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     
     if (empty($errors)) {
         try {
-            $pdo->beginTransaction();
+            $stmt = $pdo->prepare("CALL sp_create_organization_with_transaction(?, ?, ?, ?, ?)");
+            $stmt->execute([$name, $description, $sub_organization, $category, $user_id]);
+            $result = $stmt->fetch(PDO::FETCH_ASSOC);
+            $stmt->closeCursor();
             
-            $check_stmt = $pdo->prepare("SELECT COUNT(*) FROM organizations WHERE name = ?");
-            $check_stmt->execute([$name]);
-            $exists = $check_stmt->fetchColumn() > 0;
-            
-            if ($exists) {
-                $error_message = "An organization with this name already exists";
+            if ($result && isset($result['success']) && $result['success']) {
+                $success_message = $result['message'];
+                
+                header("Refresh: 2; URL=view_organization.php?id=" . $result['organization_id']);
             } else {
-                $org_stmt = $pdo->prepare("INSERT INTO organizations (name, description, sub_organization, category, members) VALUES (?, ?, ?, ?, 1)");
-                $org_stmt->execute([$name, $description, $sub_organization, $category]);
-                $org_id = $pdo->lastInsertId();
-                
-                $follow_stmt = $pdo->prepare("INSERT INTO user_organization_follows (user_id, organization_id, followed_at) VALUES (?, ?, NOW())");
-                $follow_stmt->execute([$user_id, $org_id]);
-                
-                $pdo->commit();
-                $success_message = "Organization created successfully";
-                
-                header("Refresh: 2; URL=view_organization.php?id=" . $org_id);
+                $error_message = $result['message'] ?? "Unknown error occurred";
             }
         } catch (Exception $e) {
-            $pdo->rollBack();
             $error_message = "Database error: " . $e->getMessage();
         }
     } else {

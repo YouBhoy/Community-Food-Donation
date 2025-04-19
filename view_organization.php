@@ -4,21 +4,17 @@ require_once 'db_connect.php';
 $id = isset($_GET['id']) ? (int)$_GET['id'] : 0;
 $user_id = isset($_SESSION['user_id']) ? $_SESSION['user_id'] : 0;
 
-$stmt = $pdo->prepare("SELECT * FROM organizations WHERE id = ?");
-$stmt->execute([$id]);
+$stmt = $pdo->prepare("CALL sp_get_organization_with_follow_status(?, ?)");
+$stmt->execute([$id, $user_id]);
 $org = $stmt->fetch(PDO::FETCH_ASSOC);
+$stmt->closeCursor();
 
 if (!$org) {
     header("Location: organizations.php");
     exit;
 }
 
-$isFollowing = false;
-if ($user_id > 0) {
-    $follow_stmt = $pdo->prepare("SELECT COUNT(*) FROM user_organization_follows WHERE user_id = ? AND organization_id = ?");
-    $follow_stmt->execute([$user_id, $id]);
-    $isFollowing = ($follow_stmt->fetchColumn() > 0);
-}
+$isFollowing = ($org['is_following'] == 1);
 
 $firstLetter = substr($org['name'], 0, 1);
 $category = $org['category'] ?? 'Academic';
