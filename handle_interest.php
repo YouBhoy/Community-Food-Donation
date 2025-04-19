@@ -1,40 +1,81 @@
 <?php
-require_once 'db_connection.php';
+require_once 'db_connect.php';
 
-header('Content-Type: application/json');
-
-$data = json_decode(file_get_contents('php://input'), true);
-$eventId = $data['event_id'];
-$userId = $_SESSION['user_id'];
-$action = $data['action'];
-
-$check = $conn->prepare("SELECT * FROM event_interactions 
-                         WHERE event_id = ? AND user_id = ?");
-$check->bind_param("ii", $eventId, $userId);
-$check->execute();
-
-if ($check->get_result()->num_rows > 0) {
-    $stmt = $conn->prepare("UPDATE event_interactions 
-                            SET is_interested = ? 
-                            WHERE event_id = ? AND user_id = ?");
-    $isInterested = ($action === 'interested') ? 1 : 0;
-    $stmt->bind_param("iii", $isInterested, $eventId, $userId);
-} else {
-    $stmt = $conn->prepare("INSERT INTO event_interactions 
-                            (event_id, user_id, is_interested) 
-                            VALUES (?, ?, ?)");
-    $isInterested = ($action === 'interested') ? 1 : 0;
-    $stmt->bind_param("iii", $eventId, $userId, $isInterested);
+if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+    echo json_encode(['success' => false, 'message' => 'Invalid request method']);
+    exit;
 }
 
-$stmt->execute();
+// Check if user is logged in
+if (!isLoggedIn()) {
+    echo json_encode(['success' => false, 'message' => 'User not logged in']);
+    exit;
+}
 
-$counts = [
-    'interested' => $conn->query("SELECT COUNT(*) FROM event_interactions 
-                                  WHERE event_id = $eventId AND is_interested = 1")->fetch_row()[0],
-    'not_interested' => $conn->query("SELECT COUNT(*) FROM event_interactions 
-                                      WHERE event_id = $eventId AND is_interested = 0")->fetch_row()[0]
-];
+// Get JSON data
+$json_data = file_get_contents('php://input');
+$data = json_decode($json_data, true);
 
-echo json_encode(['count' => $counts[$action]]);
+if (!isset($data['event_id']) || !isset($data['action'])) {
+    echo json_encode(['success' => false, 'message' => 'Missing required data']);
+    exit;
+}
+
+$event_id = (int)$data['event_id'];
+$action = $data['action'];
+$user_id = $_SESSION['user_id'];
+
+if ($action !== 'interested' && $action !== 'not_interested') {
+    echo json_encode(['success' => false, 'message' => 'Invalid action']);
+    exit;
+}
+
+try {
+    $pdo->beginTransaction();
+    
+    // Check if interest record already exists
+    $check_sql = "SELECT id, action FROM interests WHERE event_id = ? AND user_id = ?";
+    $check_stmt = $pdo->prepare($check_sql);
+    $check_stmt->execute([$event_id, $user_id]);
+    $interest = $check_stmt->fetch(PDO::FETCH_ASSOC);
+    
+    if ($interest) {
+        if ($interest['action'] === $action) {
+            // If same action, delete the record (toggle off)
+            $delete_sql = "DELETE FROM interests WHERE id = ?";
+            $delete_stmt = $pdo->prepare($delete_sql);
+            $delete_stmt->execute([$interest['id']]);
+        } else {
+            // If different action, update the record
+            $update_sql = "UPDATE interests SET action = ? WHERE id = ?";
+            $update_stmt = $pdo->prepare($update_sql);
+            $update_stmt->execute([$action, $interest['id']]);
+        }
+    } else {
+        // If no record exists, insert new one
+        $insert_sql = "INSERT INTO interests (event_id, user_id, action, created_at) VALUES (?, ?, ?, NOW())";
+        $insert_stmt = $pdo->prepare($insert_sql);
+        $insert_stmt->execute([$event_id, $user_id, $action]);
+    }
+    
+    // Get updated counts
+    $count_sql = "SELECT 
+                    (SELECT COUNT(*) FROM interests WHERE event_id = ? AND action = 'interested') AS interest_count,
+                    (SELECT COUNT(*) FROM interests WHERE event_id = ? AND action = 'not_interested') AS not_interested_count";
+    $count_stmt = $pdo->prepare($count_sql);
+    $count_stmt->execute([$event_id, $event_id]);
+    $counts = $count_stmt->fetch(PDO::FETCH_ASSOC);
+    
+    $pdo->commit();
+    
+    echo json_encode([
+        'success' => true, 
+        'interest_count' => $counts['interest_count'],
+        'not_interested_count' => $counts['not_interested_count']
+    ]);
+    
+} catch (Exception $e) {
+    $pdo->rollBack();
+    echo json_encode(['success' => false, 'message' => 'Database error: ' . $e->getMessage()]);
+}
 ?>

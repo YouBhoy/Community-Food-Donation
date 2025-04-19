@@ -1,170 +1,179 @@
 <?php
-session_start();
-require_once __DIR__ . '/db_connection.php';
+// Database connection
+$host = 'localhost';
+$dbname   = 'connecthub';     
+$username = 'root';     
+$password = '';     
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $title = $_POST['title'];
-    $description = $_POST['description'];
-    $location = $_POST['location'];
-    $event_date = $_POST['event_date'];
-    $creator_id = $_SESSION['user_id'];
+$conn = new mysqli($host, $username, $password, $dbname);
+if ($conn->connect_error) {
+    die("Connection failed: " . $conn->connect_error);
+}
 
-    $stmt = $conn->prepare("INSERT INTO events (title, description, location, event_date, creator_id) VALUES (?, ?, ?, ?, ?)");
-    $stmt->bind_param("ssssi", $title, $description, $location, $event_date, $creator_id);
-    
+// Handle form submission
+if ($_SERVER["REQUEST_METHOD"] == "POST") {
+    $title        = $_POST['title'];
+    $description  = $_POST['description'];
+    $event_date   = $_POST['event_date'];
+    $event_time   = $_POST['event_time'];
+    $location     = $_POST['location'];
+    $creator_id   = $_POST['creator_id'];
+    $organization = $_POST['organization'];
+    $event_type   = $_POST['event_type'];
+    $is_volunteer = isset($_POST['is_volunteer']) ? 1 : 0;
+
+    $stmt = $conn->prepare("INSERT INTO events (
+        title, description, event_date, event_time, location, creator_id,
+        organization, event_type, is_volunteer
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
+
+    $stmt->bind_param("sssssiisi", $title, $description, $event_date, $event_time, $location, $creator_id, $organization, $event_type, $is_volunteer);
+
     if ($stmt->execute()) {
-        header("Location: home.php?event_created=1");
-        exit();
+        $success_message = "✅ Event created successfully!";
     } else {
-        $error = "Failed to create event: " . $conn->error;
+        $error_message = "❌ Error: " . $stmt->error;
     }
+
+    $stmt->close();
 }
 ?>
+
 <!DOCTYPE html>
+<html lang="en">
 <head>
-    <title>Create New Event</title>
+    <meta charset="UTF-8">
+    <title>Create Event</title>
     <style>
         body {
-            font-family: Arial, sans-serif;
+            font-family: 'Segoe UI', sans-serif;
+            background: #f5f7fa;
             margin: 0;
-            padding: 20px;
-            background-color: #f0f2f5;
+            padding: 0;
         }
-        
-        header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 30px;
-        }
-        
-        .logo-container {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-        
-        .logo-container img {
-            height: 50px;
-        }
-        
-        .header-buttons button {
-            margin-left: 10px;
-            padding: 8px 15px;
-            background-color: #1877f2;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-        }
-        
-        .form-container {
+
+        .container {
             max-width: 600px;
-            margin: 0 auto;
-            background: white;
-            padding: 25px;
-            border-radius: 10px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin: 50px auto;
+            background: #ffffff;
+            padding: 30px 40px;
+            border-radius: 12px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.1);
         }
-        
-        .form-title {
+
+        h2 {
             text-align: center;
-            color: #1d2129;
             margin-bottom: 25px;
+            color: #333;
         }
-        
-        .form-group {
+
+        input[type="text"],
+        input[type="date"],
+        input[type="time"],
+        input[type="number"],
+        textarea,
+        select {
+            width: 100%;
+            padding: 10px 12px;
+            margin: 8px 0 20px 0;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            box-sizing: border-box;
+            font-size: 16px;
+        }
+
+        input[type="checkbox"] {
+            margin-right: 8px;
+        }
+
+        label {
+            font-weight: 500;
+        }
+
+        .submit-btn {
+            background-color: #4CAF50;
+            color: white;
+            padding: 12px 20px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            width: 100%;
+            font-size: 16px;
+            transition: background 0.3s;
+        }
+
+        .submit-btn:hover {
+            background-color: #45a049;
+        }
+
+        .message {
+            text-align: center;
+            font-weight: bold;
             margin-bottom: 20px;
         }
-        
-        .form-group label {
-            display: block;
-            margin-bottom: 8px;
-            font-weight: 600;
-            color: #1d2129;
+
+        .success {
+            color: green;
         }
-        
-        .form-group input,
-        .form-group textarea,
-        .form-group select {
-            width: 100%;
-            padding: 12px;
-            border: 1px solid #dddfe2;
-            border-radius: 5px;
-            font-size: 16px;
+
+        .error {
+            color: red;
         }
-        
-        .form-group textarea {
-            min-height: 120px;
-            resize: vertical;
-        }
-        
-        .submit-btn {
-            width: 100%;
-            padding: 12px;
-            background-color: #1877f2;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            font-size: 16px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: background-color 0.3s;
-        }
-        
-        .submit-btn:hover {
-            background-color: #166fe5;
-        }
-        
-        .error-message {
-            color: #ff0000;
-            margin-top: 10px;
-            text-align: center;
+
+        @media (max-width: 600px) {
+            .container {
+                margin: 20px;
+                padding: 20px;
+            }
         }
     </style>
 </head>
 <body>
-    <header>
-        <div class="logo-container">
-            <img src="images/logo.png" alt="Community Food Share">
-            <p>Fighting Hunger Together</p>
-        </div>
-        
-        <div class="header-buttons">
-            <button onclick="location.href='home.php'">Back to Home</button>
-        </div>
-    </header>
-    
-    <div class="form-container">
-        <h1 class="form-title">Create New Food Event</h1>
-        
-        <?php if (isset($error)): ?>
-            <p class="error-message"><?= htmlspecialchars($error) ?></p>
-        <?php endif; ?>
-        
-        <form action="create_event.php" method="POST">
-            <div class="form-group">
-                <label for="title">Event Title</label>
-                <input type="text" id="title" name="title" required placeholder="E.g., Community Food Drive">
-            </div>
-            
-            <div class="form-group">
-                <label for="description">Description</label>
-                <textarea id="description" name="description" required placeholder="Describe your event..."></textarea>
-            </div>
-            
-            <div class="form-group">
-                <label for="location">Location</label>
-                <input type="text" id="location" name="location" required placeholder="E.g., Main Campus Gym">
-            </div>
-            
-            <div class="form-group">
-                <label for="event_date">Date and Time</label>
-                <input type="datetime-local" id="event_date" name="event_date" required>
-            </div>
-            
-            <button type="submit" class="submit-btn">Create Event</button>
-        </form>
-    </div>
+
+<div class="container">
+    <h2>Create an Event</h2>
+
+    <?php if (!empty($success_message)) echo "<p class='message success'>$success_message</p>"; ?>
+    <?php if (!empty($error_message)) echo "<p class='message error'>$error_message</p>"; ?>
+
+    <form method="POST" action="">
+        <label>Event Title</label>
+        <input type="text" name="title" required>
+
+        <label>Description</label>
+        <textarea name="description" rows="4"></textarea>
+
+        <label>Date</label>
+        <input type="date" name="event_date" required>
+
+        <label>Time</label>
+        <input type="time" name="event_time" required>
+
+        <label>Location</label>
+        <input type="text" name="location">
+
+        <label>Creator ID</label>
+        <input type="number" name="creator_id" required>
+
+        <label>Organization</label>
+        <input type="text" name="organization">
+
+        <label>Event Type</label>
+        <select name="event_type">
+            <option value="Workshop">Workshop</option>
+            <option value="Charity">Charity</option>
+            <option value="Food Drive">Food Drive</option>
+            <option value="Other">Other</option>
+        </select>
+
+        <label>
+            <input type="checkbox" name="is_volunteer"> This is a volunteer event
+        </label>
+
+        <br><br>
+        <input type="submit" class="submit-btn" value="Create Event">
+    </form>
+</div>
+
 </body>
 </html>
