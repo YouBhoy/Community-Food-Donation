@@ -37,9 +37,6 @@ $current_page = basename($_SERVER['PHP_SELF']);
         <li class="nav-item">
           <a class="nav-link <?= $current_page === 'organizations.php' ? 'active' : '' ?>" href="organizations.php">Organizations</a>
         </li>
-        <li class="nav-item">
-          <a class="nav-link <?= $current_page === 'news.php' ? 'active' : '' ?>" href="news.php">News & Updates</a>
-        </li>
       </ul>
       <div class="ms-3">
         <?php if (isset($_SESSION['user_id'])): ?>
