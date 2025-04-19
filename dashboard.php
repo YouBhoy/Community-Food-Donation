@@ -1,35 +1,23 @@
 <?php
 require_once 'db_connect.php';
 
-// Redirect if not logged in
 redirectIfNotLoggedIn();
 
-// Get user information
 $user_id = $_SESSION['user_id'];
-$stmt = $pdo->prepare("SELECT * FROM users WHERE id = ?");
+$stmt = $pdo->prepare("CALL sp_get_user_by_id(?)");
 $stmt->execute([$user_id]);
 $user = $stmt->fetch(PDO::FETCH_ASSOC);
+$stmt->closeCursor();
 
-// Get user's events
-$events_stmt = $pdo->prepare("
-    SELECT e.*, i.action
-    FROM events e
-    LEFT JOIN interests i ON e.id = i.event_id AND i.user_id = ?
-    WHERE i.user_id = ?
-    ORDER BY e.event_date DESC
-");
-$events_stmt->execute([$user_id, $user_id]);
-$events = $events_stmt->fetchAll(PDO::FETCH_ASSOC);
+$stmt = $pdo->prepare("CALL sp_get_user_events(?)");
+$stmt->execute([$user_id]);
+$events = $stmt->fetchAll(PDO::FETCH_ASSOC);
+$stmt->closeCursor();
 
-// Get user's followed organizations
-$orgs_stmt = $pdo->prepare("
-    SELECT o.*
-    FROM organizations o
-    JOIN user_organization_follows f ON o.id = f.organization_id
-    WHERE f.user_id = ?
-");
-$orgs_stmt->execute([$user_id]);
-$organizations = $orgs_stmt->fetchAll(PDO::FETCH_ASSOC);
+$stmt = $pdo->prepare("CALL sp_get_user_organizations(?)");
+$stmt->execute([$user_id]);
+$organizations = $stmt->fetchAll(PDO::FETCH_ASSOC);
+$stmt->closeCursor();
 
 include 'header.php';
 ?>

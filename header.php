@@ -1,7 +1,6 @@
 <?php
 require_once 'db_connect.php';
 
-// Determine active page for navigation highlighting
 $current_page = basename($_SERVER['PHP_SELF']);
 ?>
 <!DOCTYPE html>
@@ -16,7 +15,6 @@ $current_page = basename($_SERVER['PHP_SELF']);
 </head>
 <body>
 
-<!-- Navbar -->
 <nav class="navbar navbar-expand-lg navbar-light bg-light border-bottom">
   <div class="container-fluid">
     <a class="navbar-brand" href="index.php">ConnectHub</a>

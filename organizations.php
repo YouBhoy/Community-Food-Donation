@@ -7,13 +7,43 @@ $search_query = isset($_GET['search']) ? trim($_GET['search']) : '';
 $category = isset($_GET['category']) ? $_GET['category'] : 'All Categories';
 $sort_by = isset($_GET['sort_by']) ? $_GET['sort_by'] : 'Name';
 
-// Get organizations based on filters using stored procedure
-$stmt = $pdo->prepare("CALL sp_get_organizations_filtered(?, ?, ?)");
-$stmt->execute([$search_query, $category, $sort_by]);
-$organizations = $stmt->fetchAll(PDO::FETCH_ASSOC);
-$stmt->closeCursor(); // Important: Close the cursor after fetching all results
+$where_clauses = [];
+$params = [];
 
-// Get all categories
+if (!empty($search_query)) {
+    $where_clauses[] = "(name LIKE ? OR description LIKE ?)";
+    $search_param = "%" . $search_query . "%";
+    $params[] = $search_param;
+    $params[] = $search_param;
+}
+
+if ($category != 'All Categories') {
+    $where_clauses[] = "category = ?";
+    $params[] = $category;
+}
+
+$sql = "SELECT * FROM organizations";
+if (!empty($where_clauses)) {
+    $sql .= " WHERE " . implode(" AND ", $where_clauses);
+}
+
+if ($sort_by == 'Name') {
+    $sql .= " ORDER BY name ASC";
+} elseif ($sort_by == 'Members') {
+    $sql .= " ORDER BY members DESC";
+} elseif ($sort_by == 'Newest') {
+    $sql .= " ORDER BY created_at DESC";
+} else {
+    $sql .= " ORDER BY name ASC";
+}
+
+$stmt = $pdo->prepare($sql);
+foreach ($params as $i => $param) {
+    $stmt->bindValue($i + 1, $param);
+}
+$stmt->execute();
+$organizations = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
 $categories = [
     'Academic',
     'Arts and Culture',
@@ -24,13 +54,12 @@ $categories = [
     'Health and Wellness'
 ];
 
-// Pre-fetch all user follows for better performance
 $user_follows = [];
 if ($user_id > 0) {
     $follow_stmt = $pdo->prepare("SELECT organization_id FROM user_organization_follows WHERE user_id = ?");
     $follow_stmt->execute([$user_id]);
     $follows = $follow_stmt->fetchAll(PDO::FETCH_COLUMN);
-    $user_follows = array_flip($follows); // Convert to associative array for O(1) lookups
+    $user_follows = array_flip($follows); 
 }
 
 include 'header.php';
@@ -44,7 +73,6 @@ include 'header.php';
 </div>
 
 <div class="container my-5">
-    <!-- Display success/error messages if they exist in session -->
     <?php if (isset($_SESSION['success_message'])): ?>
         <div class="alert alert-success alert-dismissible fade show" role="alert">
             <?= htmlspecialchars($_SESSION['success_message']) ?>
@@ -130,7 +158,6 @@ include 'header.php';
         <?php 
         if (!empty($organizations)):
             foreach ($organizations as $org): 
-                // Check if user is following this organization using pre-fetched data
                 $isFollowing = isset($user_follows[$org['id']]);
                 
                 $firstLetter = substr($org['name'], 0, 1);
@@ -199,7 +226,6 @@ include 'header.php';
 <script>
 $(document).ready(function() {
     $('.follow-btn').click(function() {
-        // Check if user is logged in
         <?php if (!isLoggedIn()): ?>
         window.location.href = 'login.php?redirect=organizations.php';
         return;

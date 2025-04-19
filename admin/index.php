@@ -1,23 +1,25 @@
 <?php
 require_once '../db_connect.php';
 
-// Redirect if not logged in or not admin
 if (!isLoggedIn() || !isAdmin()) {
     header("Location: ../login.php");
     exit;
 }
 
-// Get users for admin panel
-$all_users_stmt = $pdo->query("SELECT * FROM users ORDER BY id DESC");
-$allUsers = $all_users_stmt->fetchAll(PDO::FETCH_ASSOC);
+$stmt = $pdo->prepare("CALL sp_get_all_users()");
+$stmt->execute();
+$allUsers = $stmt->fetchAll(PDO::FETCH_ASSOC);
+$stmt->closeCursor();
 
-$admin_users_stmt = $pdo->prepare("SELECT * FROM users WHERE role = ? ORDER BY id DESC");
-$admin_users_stmt->execute(['admin']);
-$adminUsers = $admin_users_stmt->fetchAll(PDO::FETCH_ASSOC);
+$stmt = $pdo->prepare("CALL sp_get_users_by_role(?)");
+$stmt->execute(['admin']);
+$adminUsers = $stmt->fetchAll(PDO::FETCH_ASSOC);
+$stmt->closeCursor();
 
-$regular_users_stmt = $pdo->prepare("SELECT * FROM users WHERE role != ? ORDER BY id DESC");
-$regular_users_stmt->execute(['admin']);
-$regularUsers = $regular_users_stmt->fetchAll(PDO::FETCH_ASSOC);
+$stmt = $pdo->prepare("CALL sp_get_users_by_role_not(?)");
+$stmt->execute(['admin']);
+$regularUsers = $stmt->fetchAll(PDO::FETCH_ASSOC);
+$stmt->closeCursor();
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -139,7 +141,10 @@ $regularUsers = $regular_users_stmt->fetchAll(PDO::FETCH_ASSOC);
             <div class="card-content">
               <div class="card-value">
                 <?php
-                $event_count = $pdo->query("SELECT COUNT(*) FROM events")->fetchColumn();
+                $stmt = $pdo->prepare("CALL sp_count_events()");
+                $stmt->execute();
+                $event_count = $stmt->fetchColumn();
+                $stmt->closeCursor();
                 echo $event_count;
                 ?>
               </div>
@@ -155,7 +160,10 @@ $regularUsers = $regular_users_stmt->fetchAll(PDO::FETCH_ASSOC);
             <div class="card-content">
               <div class="card-value">
                 <?php
-                $org_count = $pdo->query("SELECT COUNT(*) FROM organizations")->fetchColumn();
+                $stmt = $pdo->prepare("CALL sp_count_organizations()");
+                $stmt->execute();
+                $org_count = $stmt->fetchColumn();
+                $stmt->closeCursor();
                 echo $org_count;
                 ?>
               </div>

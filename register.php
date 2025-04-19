@@ -1,7 +1,6 @@
 <?php
 require_once 'db_connect.php';
 
-// If user is already logged in, redirect to dashboard
 if (isLoggedIn()) {
     header("Location: dashboard.php");
     exit;

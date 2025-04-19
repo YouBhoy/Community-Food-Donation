@@ -10,16 +10,8 @@ $event_id = $_GET['id'];
 $user_id = isset($_SESSION['user_id']) ? $_SESSION['user_id'] : 0;
 
 try {
-    $sql = "SELECT e.*, CONCAT(u.first_name, ' ', u.last_name) AS username, 
-        (SELECT COUNT(*) FROM interests WHERE event_id = e.id AND action = 'interested') AS interest_count,
-        (SELECT COUNT(*) FROM interests WHERE event_id = e.id AND action = 'not_interested') AS not_interested_count,
-        (SELECT action FROM interests WHERE event_id = e.id AND user_id = ?) AS user_action
-        FROM events e
-        LEFT JOIN users u ON e.creator_id = u.id
-        WHERE e.id = ?";
-            
-    $stmt = $pdo->prepare($sql);
-    $stmt->execute([$user_id, $event_id]);
+    $stmt = $pdo->prepare("CALL sp_get_event_details(?, ?)");
+    $stmt->execute([$event_id, $user_id]);
     
     if ($stmt->rowCount() == 0) {
         header("Location: events.php");
@@ -27,6 +19,7 @@ try {
     }
     
     $event = $stmt->fetch(PDO::FETCH_ASSOC);
+    $stmt->closeCursor();
     
 } catch (Exception $e) {
     $error_message = "Database error: " . $e->getMessage();
@@ -98,6 +91,8 @@ include 'header.php';
                                     <button class="btn <?= $event['user_action'] == 'not_interested' ? 'btn-danger' : 'btn-outline-danger' ?>" onclick="handleInterest(<?= $event['id'] ?>, 'not_interested')">
                                         <i class="fas fa-thumbs-down me-2"></i>
                                         Not Interested (<?= $event['not_interested_count'] ?? 0 ?>)
+                                    </button>
+                                  ?? 0 ?>)
                                     </button>
                                 </div>
                             </div>

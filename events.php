@@ -6,88 +6,19 @@ $event_type = isset($_GET['event_type']) ? $_GET['event_type'] : 'all';
 $organization = isset($_GET['organization']) ? $_GET['organization'] : 'all';
 $search = isset($_GET['search']) ? $_GET['search'] : '';
 $sort_by = isset($_GET['sort_by']) ? $_GET['sort_by'] : 'date_desc';
+$user_id = isset($_SESSION['user_id']) ? $_SESSION['user_id'] : 0;
 
 try {
-    $sql = "SELECT e.*, CONCAT(u.first_name, ' ', u.last_name) AS username, 
-        (SELECT COUNT(*) FROM interests WHERE event_id = e.id AND action = 'interested') AS interest_count,
-        (SELECT COUNT(*) FROM interests WHERE event_id = e.id AND action = 'not_interested') AS not_interested_count,
-        (SELECT action FROM interests WHERE event_id = e.id AND user_id = ?) AS user_action
-        FROM events e
-        LEFT JOIN users u ON e.creator_id = u.id";
-
-    $where_clauses = [];
-    $params = [];
-    $types = "";
-
-    if (isLoggedIn()) {
-        $params[] = $_SESSION['user_id'];
-    } else {
-        $params[] = null;
-    }
-
-    if ($event_type != 'all') {
-        $where_clauses[] = "e.event_type = ?";
-        $params[] = $event_type;
-    }
-
-    if ($organization != 'all') {
-        $where_clauses[] = "e.organization = ?";
-        $params[] = $organization;
-    }
-
-    if (!empty($search)) {
-        $where_clauses[] = "(e.title LIKE ? OR e.description LIKE ?)";
-        $search_param = "%" . $search . "%";
-        $params[] = $search_param;
-        $params[] = $search_param;
-    }
-
-    if ($active_tab == 'upcoming') {
-        $where_clauses[] = "e.event_date >= CURDATE()";
-    } elseif ($active_tab == 'past') {
-        $where_clauses[] = "e.event_date < CURDATE()";
-    } elseif ($active_tab == 'volunteer') {
-        $where_clauses[] = "e.is_volunteer = 1";
-    }
-
-    if (!empty($where_clauses)) {
-        $sql .= " WHERE " . implode(" AND ", $where_clauses);
-    }
-
-    switch ($sort_by) {
-        case 'date_asc':
-            $sql .= " ORDER BY e.event_date ASC";
-            break;
-        case 'popularity':
-            $sql .= " ORDER BY interest_count DESC";
-            break;
-        case 'title':
-            $sql .= " ORDER BY e.title ASC";
-            break;
-        case 'date_desc':
-        default:
-            $sql .= " ORDER BY e.event_date DESC";
-            break;
-    }
-
-    $stmt = $pdo->prepare($sql);
-    
-    foreach ($params as $i => $param) {
-        $stmt->bindValue($i + 1, $param);
-    }
-    
-    $stmt->execute();
+    $stmt = $pdo->prepare("CALL sp_get_events_filtered(?, ?, ?, ?, ?, ?)");
+    $stmt->execute([$active_tab, $event_type, $organization, $search, $sort_by, $user_id]);
     $events = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    $stmt->closeCursor();
 
     // Get event statistics
-    $stats_sql = "SELECT 
-                    COUNT(*) AS total_events,
-                    COUNT(CASE WHEN event_date >= CURDATE() THEN 1 END) AS upcoming_events,
-                    COUNT(CASE WHEN event_date < CURDATE() THEN 1 END) AS past_events,
-                    COUNT(CASE WHEN is_volunteer = 1 THEN 1 END) AS volunteer_events
-                  FROM events";
-    $stats_stmt = $pdo->query($stats_sql);
-    $stats = $stats_stmt->fetch(PDO::FETCH_ASSOC);
+    $stmt = $pdo->prepare("CALL sp_get_event_statistics()");
+    $stmt->execute();
+    $stats = $stmt->fetch(PDO::FETCH_ASSOC);
+    $stmt->closeCursor();
 
 } catch (Exception $e) {
     $error_message = "Database error: " . $e->getMessage();

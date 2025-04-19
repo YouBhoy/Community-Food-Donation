@@ -48,12 +48,8 @@ function redirectIfNotLoggedIn($redirect = 'login.php') {
 
 function getLatestEvents($pdo, $limit = 3) {
     try {
-        $stmt = $pdo->prepare("SELECT event_id, title, description, event_date, event_time, event_type 
-                               FROM events 
-                               ORDER BY event_date DESC, event_time DESC 
-                               LIMIT ?");
-                               
-        $stmt->bindValue(1, $limit, PDO::PARAM_INT);
+        $stmt = $pdo->prepare("CALL sp_get_latest_events(?)");
+        $stmt->bindParam(1, $limit, PDO::PARAM_INT);
         $stmt->execute();
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     } catch (PDOException $e) {

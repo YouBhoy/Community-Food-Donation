@@ -1,14 +1,5 @@
 <?php
-// Database connection
-$host = 'localhost';
-$dbname   = 'connecthub';     
-$username = 'root';     
-$password = '';     
-
-$conn = new mysqli($host, $username, $password, $dbname);
-if ($conn->connect_error) {
-    die("Connection failed: " . $conn->connect_error);
-}
+require_once 'db_connect.php';
 
 // Handle form submission
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
@@ -22,20 +13,20 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $event_type   = $_POST['event_type'];
     $is_volunteer = isset($_POST['is_volunteer']) ? 1 : 0;
 
-    $stmt = $conn->prepare("INSERT INTO events (
-        title, description, event_date, event_time, location, creator_id,
-        organization, event_type, is_volunteer
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
-
-    $stmt->bind_param("sssssiisi", $title, $description, $event_date, $event_time, $location, $creator_id, $organization, $event_type, $is_volunteer);
-
-    if ($stmt->execute()) {
+    $stmt = $pdo->prepare("CALL sp_create_event(?, ?, ?, ?, ?, ?, ?, ?, ?)");
+    $stmt->execute([
+        $title, $description, $event_date, $event_time, $location, 
+        $creator_id, $organization, $event_type, $is_volunteer
+    ]);
+    
+    $result = $stmt->fetch(PDO::FETCH_ASSOC);
+    $stmt->closeCursor();
+    
+    if ($result && isset($result['success']) && $result['success']) {
         $success_message = "✅ Event created successfully!";
     } else {
-        $error_message = "❌ Error: " . $stmt->error;
+        $error_message = "❌ Error: " . ($result['message'] ?? "Unknown error occurred");
     }
-
-    $stmt->close();
 }
 ?>
 

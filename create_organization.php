@@ -8,21 +8,14 @@ $user_id = $_SESSION['user_id'];
 $success_message = '';
 $error_message = '';
 
-// Get all categories from the database using stored procedure
+// Get all categories from the database
 try {
-    // Check if the stored procedure exists
-    $check_proc_stmt = $pdo->prepare("CALL sp_check_procedure_exists('sp_get_organization_categories')");
-    $check_proc_stmt->execute();
-    $proc_exists = $check_proc_stmt->fetch(PDO::FETCH_ASSOC)['procedure_exists'] > 0;
-    $check_proc_stmt->closeCursor();
+    // Direct SQL query instead of stored procedure
+    $stmt = $pdo->query("SELECT DISTINCT category FROM organizations ORDER BY category");
+    $categories = $stmt->fetchAll(PDO::FETCH_COLUMN);
     
-    if ($proc_exists) {
-        $stmt = $pdo->prepare("CALL sp_get_organization_categories()");
-        $stmt->execute();
-        $categories = $stmt->fetchAll(PDO::FETCH_COLUMN);
-        $stmt->closeCursor();
-    } else {
-        // Fallback to default categories if procedure doesn't exist
+    // If no categories found, use default list
+    if (empty($categories)) {
         $categories = [
             'Academic',
             'Arts and Culture',
@@ -66,32 +59,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     
     if (empty($errors)) {
         try {
-            // Check if the stored procedure exists
-            $check_proc_stmt = $pdo->prepare("CALL sp_check_procedure_exists('sp_create_organization_with_transaction')");
-            $check_proc_stmt->execute();
-            $proc_exists = $check_proc_stmt->fetch(PDO::FETCH_ASSOC)['procedure_exists'] > 0;
-            $check_proc_stmt->closeCursor();
+            $pdo->beginTransaction();
             
-            if ($proc_exists) {
-                // Call the stored procedure to create the organization with transaction handling
-                $stmt = $pdo->prepare("CALL sp_create_organization_with_transaction(?, ?, ?, ?, ?)");
-                $stmt->execute([$name, $description, $sub_organization, $category, $user_id]);
-                
-                $result = $stmt->fetch(PDO::FETCH_ASSOC);
-                
-                if ($result['success']) {
-                    $success_message = $result['message'];
-                    $org_id = $result['organization_id'];
-                    
-                    // Redirect to the new organization page after a short delay
-                    header("Refresh: 2; URL=view_organization.php?id=" . $org_id);
-                } else {
-                    $error_message = $result['message'];
-                }
+            $check_stmt = $pdo->prepare("SELECT COUNT(*) FROM organizations WHERE name = ?");
+            $check_stmt->execute([$name]);
+            $exists = $check_stmt->fetchColumn() > 0;
+            
+            if ($exists) {
+                $error_message = "An organization with this name already exists";
             } else {
-                $error_message = "Required stored procedure 'sp_create_organization_with_transaction' does not exist.";
+                $org_stmt = $pdo->prepare("INSERT INTO organizations (name, description, sub_organization, category, members) VALUES (?, ?, ?, ?, 1)");
+                $org_stmt->execute([$name, $description, $sub_organization, $category]);
+                $org_id = $pdo->lastInsertId();
+                
+                $follow_stmt = $pdo->prepare("INSERT INTO user_organization_follows (user_id, organization_id, followed_at) VALUES (?, ?, NOW())");
+                $follow_stmt->execute([$user_id, $org_id]);
+                
+                $pdo->commit();
+                $success_message = "Organization created successfully";
+                
+                header("Refresh: 2; URL=view_organization.php?id=" . $org_id);
             }
         } catch (Exception $e) {
+            $pdo->rollBack();
             $error_message = "Database error: " . $e->getMessage();
         }
     } else {

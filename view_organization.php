@@ -4,8 +4,7 @@ require_once 'db_connect.php';
 $id = isset($_GET['id']) ? (int)$_GET['id'] : 0;
 $user_id = isset($_SESSION['user_id']) ? $_SESSION['user_id'] : 0;
 
-// Get organization details using stored procedure
-$stmt = $pdo->prepare("CALL sp_get_organization_by_id(?)");
+$stmt = $pdo->prepare("SELECT * FROM organizations WHERE id = ?");
 $stmt->execute([$id]);
 $org = $stmt->fetch(PDO::FETCH_ASSOC);
 
@@ -14,13 +13,9 @@ if (!$org) {
     exit;
 }
 
-// Close the cursor to allow for next query
-$stmt->closeCursor();
-
-// Check if user is following this organization using stored procedure
 $isFollowing = false;
 if ($user_id > 0) {
-    $follow_stmt = $pdo->prepare("CALL sp_check_user_following(?, ?)");
+    $follow_stmt = $pdo->prepare("SELECT COUNT(*) FROM user_organization_follows WHERE user_id = ? AND organization_id = ?");
     $follow_stmt->execute([$user_id, $id]);
     $isFollowing = ($follow_stmt->fetchColumn() > 0);
 }
@@ -119,7 +114,6 @@ include 'header.php';
 <script>
 $(document).ready(function() {
     $('.follow-btn').click(function() {
-        // Check if user is logged in
         <?php if (!isLoggedIn()): ?>
         window.location.href = 'login.php?redirect=view_organization.php?id=<?= $id ?>';
         return;
