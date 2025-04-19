@@ -6,7 +6,7 @@ include 'header.php';
 ?>
 
 <div class="hero">
-  <h1>Community ConnectHub</h1>
+  <h1>Campus ConnectHub</h1>
   <p>Fostering partnerships and collaboration among university-based organizations.</p>
   <div class="d-flex justify-content-center">
     <a href="events.php" class="btn btn-light mx-2">Explore Events</a>
@@ -49,8 +49,8 @@ include 'header.php';
 <div class="container my-5">
   <div class="row align-items-center">
     <div class="col-md-6">
-      <h2>Why Join Community ConnectHub?</h2>
-      <p class="lead">Community ConnectHub is a comprehensive platform designed to foster collaboration and partnerships among university-based organizations, aligned with SDG 17.</p>
+      <h2>Why Join Campus ConnectHub?</h2>
+      <p class="lead">Campus ConnectHub is a comprehensive platform designed to foster collaboration and partnerships among university-based organizations, aligned with SDG 17.</p>
       <div class="d-flex flex-column gap-3 mt-4">
         <div class="d-flex align-items-start">
           <div class="bg-primary text-white rounded-circle p-2 me-3">
@@ -85,7 +85,7 @@ include 'header.php';
       <div class="card shadow-lg">
         <div class="card-body p-4">
           <h4 class="card-title">SDG 17: Partnerships for the Goals</h4>
-          <p class="card-text">Community ConnectHub is aligned with Sustainable Development Goal 17, emphasizing meaningful collaboration for sustainable development. By joining, you help drive positive change on campus and beyond.</p>
+          <p class="card-text">Campus ConnectHub is aligned with Sustainable Development Goal 17, emphasizing meaningful collaboration for sustainable development. By joining, you help drive positive change on campus and beyond.</p>
           <div class="text-center mt-4">
             <a href="register.php" class="btn btn-primary">Join Now</a>
           </div>
