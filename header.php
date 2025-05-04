@@ -1,5 +1,9 @@
 <?php
 require_once 'db_connect.php';
+<<<<<<< HEAD
+=======
+
+>>>>>>> e91a24dcccb30f8c145d5b58ca189efdae6782ad
 $current_page = basename($_SERVER['PHP_SELF']);
 ?>
 <!DOCTYPE html>
@@ -21,7 +25,11 @@ $current_page = basename($_SERVER['PHP_SELF']);
       <span class="navbar-toggler-icon"></span>
     </button>
     <div class="collapse navbar-collapse" id="navbarNav">
+<<<<<<< HEAD
       <ul class="navbar-nav ms-auto" id="navLinks">
+=======
+      <ul class="navbar-nav ms-auto">
+>>>>>>> e91a24dcccb30f8c145d5b58ca189efdae6782ad
         <li class="nav-item">
           <a class="nav-link <?= $current_page === 'index.php' ? 'active' : '' ?>" href="index.php">Home</a>
         </li>
@@ -34,13 +42,25 @@ $current_page = basename($_SERVER['PHP_SELF']);
         <li class="nav-item">
           <a class="nav-link <?= $current_page === 'organizations.php' ? 'active' : '' ?>" href="organizations.php">Organizations</a>
         </li>
+<<<<<<< HEAD
+=======
+        <li class="nav-item">
+          <a class="nav-link <?= $current_page === 'news.php' ? 'active' : '' ?>" href="news.php">News & Updates</a>
+        </li>
+>>>>>>> e91a24dcccb30f8c145d5b58ca189efdae6782ad
       </ul>
       <div class="ms-3">
         <?php if (isset($_SESSION['user_id'])): ?>
           <div class="dropdown">
+<<<<<<< HEAD
             <button class="btn btn-outline-primary dropdown-toggle" type="button" id="userDropdown" data-bs-toggle="dropdown" aria-expanded="false">
               <?= htmlspecialchars($_SESSION['username'] ?? 'User') ?>
             </button>
+=======
+            <a href="#" class="btn btn-outline-primary dropdown-toggle" id="userDropdown" data-bs-toggle="dropdown">
+              <?= htmlspecialchars($_SESSION['username'] ?? 'User') ?>
+            </a>
+>>>>>>> e91a24dcccb30f8c145d5b58ca189efdae6782ad
             <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
               <li><a class="dropdown-item" href="dashboard.php">Dashboard</a></li>
               <?php if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin'): ?>
@@ -58,6 +78,7 @@ $current_page = basename($_SERVER['PHP_SELF']);
     </div>
   </div>
 </nav>
+<<<<<<< HEAD
 
 <!-- JavaScript to handle redirection if not logged in -->
 <script>
@@ -75,3 +96,5 @@ $current_page = basename($_SERVER['PHP_SELF']);
     });
   });
 </script>
+=======
+>>>>>>> e91a24dcccb30f8c145d5b58ca189efdae6782ad

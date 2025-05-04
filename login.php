@@ -68,6 +68,10 @@ $redirect = isset($_GET['redirect']) ? $_GET['redirect'] : 'dashboard.php';
                 <button type="submit" class="btn-auth">Sign in</button>
             </form>
             <p class="auth-footer">Don't have an account? <a href="register.php">Sign up</a></p>
+<<<<<<< HEAD
+=======
+            <p class="auth-footer mt-2"><a href="index.php"><i class="fas fa-home me-1"></i>Back to Home</a></p>
+>>>>>>> e91a24dcccb30f8c145d5b58ca189efdae6782ad
         </div>
     </div>
     

@@ -35,6 +35,7 @@ include 'header.php';
 </section>
 
 <div class="container">
+<<<<<<< HEAD
     <?php if (isLoggedIn()): ?>
     <div class="text-end mb-4">
         <a href="create_event_form.php" class="btn btn-primary">
@@ -42,6 +43,8 @@ include 'header.php';
         </a>
     </div>
     <?php endif; ?>
+=======
+>>>>>>> e91a24dcccb30f8c145d5b58ca189efdae6782ad
     <?php if (isset($stats)): ?>
     <div class="stats-bar">
         <div class="stat-item">

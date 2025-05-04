@@ -6,11 +6,18 @@ if (!isset($_GET['id'])) {
     exit;
 }
 
+<<<<<<< HEAD
 $event_id = (int)$_GET['id'];
 $user_id = isset($_SESSION['user_id']) ? $_SESSION['user_id'] : 0;
 
 try {
     // Get event details
+=======
+$event_id = $_GET['id'];
+$user_id = isset($_SESSION['user_id']) ? $_SESSION['user_id'] : 0;
+
+try {
+>>>>>>> e91a24dcccb30f8c145d5b58ca189efdae6782ad
     $stmt = $pdo->prepare("CALL sp_get_event_details(?, ?)");
     $stmt->execute([$event_id, $user_id]);
     
@@ -22,12 +29,15 @@ try {
     $event = $stmt->fetch(PDO::FETCH_ASSOC);
     $stmt->closeCursor();
     
+<<<<<<< HEAD
     // Get comments for this event
     $stmt = $pdo->prepare("CALL sp_get_event_comments(?)");
     $stmt->execute([$event_id]);
     $comments = $stmt->fetchAll(PDO::FETCH_ASSOC);
     $stmt->closeCursor();
     
+=======
+>>>>>>> e91a24dcccb30f8c145d5b58ca189efdae6782ad
 } catch (Exception $e) {
     $error_message = "Database error: " . $e->getMessage();
 }
@@ -47,7 +57,11 @@ include 'header.php';
             <?= htmlspecialchars($error_message) ?>
         </div>
     <?php else: ?>
+<<<<<<< HEAD
         <div class="card shadow-sm mb-4">
+=======
+        <div class="card shadow-sm">
+>>>>>>> e91a24dcccb30f8c145d5b58ca189efdae6782ad
             <div class="card-body p-4">
                 <div class="row">
                     <div class="col-md-8">
@@ -75,7 +89,11 @@ include 'header.php';
                             <p><?= nl2br(htmlspecialchars($event['description'])) ?></p>
                         </div>
                         
+<<<<<<< HEAD
                         <?php if (isset($event['is_volunteer']) && $event['is_volunteer']): ?>
+=======
+                        <?php if ($event['is_volunteer']): ?>
+>>>>>>> e91a24dcccb30f8c145d5b58ca189efdae6782ad
                             <div class="alert alert-info">
                                 <i class="fas fa-hands-helping me-2"></i>
                                 This is a volunteer opportunity. Join to earn volunteer hours!
@@ -90,15 +108,28 @@ include 'header.php';
                                 <p class="card-text">Show your interest in this event</p>
                                 
                                 <div class="d-grid gap-2">
+<<<<<<< HEAD
                                     <button class="btn <?= isset($event['user_action']) && $event['user_action'] == 'interested' ? 'btn-success' : 'btn-outline-success' ?>" onclick="handleInterest(<?= $event['id'] ?>, 'interested')">
+=======
+                                    <button class="btn <?= $event['user_action'] == 'interested' ? 'btn-success' : 'btn-outline-success' ?>" onclick="handleInterest(<?= $event['id'] ?>, 'interested')">
+>>>>>>> e91a24dcccb30f8c145d5b58ca189efdae6782ad
                                         <i class="fas fa-thumbs-up me-2"></i>
                                         Interested (<?= $event['interest_count'] ?? 0 ?>)
                                     </button>
                                     
+<<<<<<< HEAD
                                     <button class="btn <?= isset($event['user_action']) && $event['user_action'] == 'not_interested' ? 'btn-danger' : 'btn-outline-danger' ?>" onclick="handleInterest(<?= $event['id'] ?>, 'not_interested')">
                                         <i class="fas fa-thumbs-down me-2"></i>
                                         Not Interested (<?= $event['not_interested_count'] ?? 0 ?>)
                                     </button>
+=======
+                                    <button class="btn <?= $event['user_action'] == 'not_interested' ? 'btn-danger' : 'btn-outline-danger' ?>" onclick="handleInterest(<?= $event['id'] ?>, 'not_interested')">
+                                        <i class="fas fa-thumbs-down me-2"></i>
+                                        Not Interested (<?= $event['not_interested_count'] ?? 0 ?>)
+                                    </button>
+                                  ?? 0 ?>)
+                                    </button>
+>>>>>>> e91a24dcccb30f8c145d5b58ca189efdae6782ad
                                 </div>
                             </div>
                         </div>
@@ -118,6 +149,7 @@ include 'header.php';
                 </div>
             </div>
         </div>
+<<<<<<< HEAD
         
         <!-- Comments Section -->
         <div class="card shadow-sm">
@@ -170,6 +202,8 @@ include 'header.php';
                 </div>
             </div>
         </div>
+=======
+>>>>>>> e91a24dcccb30f8c145d5b58ca189efdae6782ad
     <?php endif; ?>
 </div>
 
@@ -198,6 +232,7 @@ function handleInterest(eventId, action) {
         console.error('Error:', error);
     });
 }
+<<<<<<< HEAD
 
 // Comment functionality
 document.addEventListener('DOMContentLoaded', function() {
@@ -320,6 +355,8 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     <?php endif; ?>
 });
+=======
+>>>>>>> e91a24dcccb30f8c145d5b58ca189efdae6782ad
 </script>
 
 <?php include 'footer.php'; ?>
