@@ -248,8 +248,12 @@
 }
 
 /* Content */
-.content {
-  padding: 16px;
+.content { 
+  margin-left: 280px; 
+  padding-top: 40px;
+  max-width: 1200px;
+  margin: 0 auto; 
+  padding: 40px 16px;
 }
 
 .content.hidden {
@@ -306,6 +310,9 @@
 .tab-content.active {
   display: block;
 }
+.hidden {
+  display: none !important;
+}
 
 /* Cards */
 .card {
@@ -357,6 +364,7 @@
 .table {
   width: 100%;
   border-collapse: collapse;
+  table-layout: fixed;
 }
 
 .table th,
@@ -364,6 +372,9 @@
   padding: 12px 16px;
   text-align: left;
   font-size: 0.875rem;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  white-space: normal;
 }
 
 .table th {
@@ -467,11 +478,6 @@
   }
 }
 
-@media (min-width: 768px) {
-  .content {
-    padding: 24px;
-  }
-}
 
 @media (min-width: 1024px) {
   .card-grid {
@@ -482,3 +488,8 @@
     display: none;
   }
 }
+
+
+
+
+
