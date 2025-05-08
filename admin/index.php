@@ -1,10 +1,6 @@
 <?php
 require_once '../db_connect.php';
 
-if (!isLoggedIn() || !isAdmin()) {
-    header("Location: ../login.php");
-    exit;
-}
 
 $stmt = $pdo->prepare("CALL sp_get_all_users()");
 $stmt->execute();
@@ -12,7 +8,7 @@ $allUsers = $stmt->fetchAll(PDO::FETCH_ASSOC);
 $stmt->closeCursor();
 
 $stmt = $pdo->prepare("CALL sp_get_users_by_role(?)");
-$stmt->execute(['admin']);
+$stmt->execute(['admin']);    
 $adminUsers = $stmt->fetchAll(PDO::FETCH_ASSOC);
 $stmt->closeCursor();
 
@@ -20,7 +16,16 @@ $stmt = $pdo->prepare("CALL sp_get_users_by_role_not(?)");
 $stmt->execute(['admin']);
 $regularUsers = $stmt->fetchAll(PDO::FETCH_ASSOC);
 $stmt->closeCursor();
+
+$stmt = $pdo->query("SELECT * FROM events ORDER BY event_date DESC");
+$events = $stmt->fetchAll(PDO::FETCH_ASSOC);  
+
+$stmt = $pdo->prepare("CALL sp_get_all_organizations()");
+$stmt->execute();
+$organizations = $stmt->fetchAll(PDO::FETCH_ASSOC);
+$stmt->closeCursor();
 ?>
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -83,9 +88,9 @@ $stmt->closeCursor();
       </div>
     </aside>
 
-    <!-- Main Content -->
-    <main class="main-content">
-      <!-- Header -->
+<!-- Main Content -->
+    <main class="main-content"> 
+<!-- Header -->
       <header class="header">
         <button class="sidebar-toggle" id="sidebar-toggle">
           <i class="fas fa-bars"></i>
@@ -114,7 +119,139 @@ $stmt->closeCursor();
         </div>
       </header>
 
-      <!-- Dashboard Content -->
+ <!-- Organizations Content -->
+  <div class="content hidden" id="organizations-content"> 
+    <div class="page-header">
+     <h1>Manage Organizations</h1>
+     <p class="text-muted">View, add, and manage organization records</p>
+  </div>
+
+  <div class="header-actions-container">
+    <button class="button" id="add-organization-button">
+      <i class="fas fa-building"></i> Add Organization
+    </button>
+  </div>
+
+  <div class="tabs">
+    <div class="tab-content active" id="organizations-tab">
+      <div class="card">
+        <div class="card-header">
+          <div class="search-container">
+            <i class="fas fa-search search-icon"></i>
+            <input type="search" class="search-input" placeholder="Search organizations..." id="search-organizations">
+          </div>
+          <div class="button-group">
+            <button class="button button-outline">Filter</button>
+          </div>
+        </div>
+        <div class="card-content">
+          <div class="table-container">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Description</th>
+                  <th>Sub-Org</th>
+                  <th>Members</th>
+                  <th>Category</th>
+                  <th>Created</th>
+                  <th class="text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                <?php foreach ($organizations as $org): ?>
+                <tr>
+                  <td><?= htmlspecialchars($org['name']) ?></td>
+                  <td><?= htmlspecialchars($org['description']) ?></td>
+                  <td><?= htmlspecialchars($org['sub_organization']) ?></td>
+                  <td><?= htmlspecialchars($org['members']) ?></td>
+                  <td><?= htmlspecialchars($org['category']) ?></td>
+                  <td><?= htmlspecialchars($org['created_at']) ?></td>
+                  <td class="text-right">
+                    <div class="button-group">
+                      <button class="icon-button edit-organization" data-id="<?= $org['id'] ?>"><i class="fas fa-edit"></i></button>
+                      <button class="icon-button delete-organization" data-id="<?= $org['id'] ?>"><i class="fas fa-trash"></i></button>
+                    </div>
+                  </td>
+                </tr>
+                <?php endforeach; ?>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Events Content -->
+  <div class="content hidden" id="events-content"> 
+     <div class="page-header">
+      <h1>Manage Events</h1>
+     <p class="text-muted">Create, update, and remove events</p>
+  </div>
+
+  <div class="header-actions-container">
+    <button class="button" id="add-event-button">
+      <i class="fas fa-calendar-plus"></i> Add Event
+    </button>
+  </div>
+
+  <div class="tabs">
+    <div class="tab-content active" id="events-tab">
+      <div class="card">
+        <div class="card-header">
+          <div class="search-container">
+            <i class="fas fa-search search-icon"></i>
+            <input type="search" class="search-input" placeholder="Search events..." id="search-events">
+          </div>
+          <div class="button-group">
+            <button class="button button-outline">Filter</button>
+          </div>
+        </div>
+        <div class="card-content">
+          <div class="table-container">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>Title</th>
+                  <th>Date</th>
+                  <th>Time</th>
+                  <th>Location</th>
+                  <th>Org</th>
+                  <th>Type</th>
+                  <th>Volunteer?</th>
+                  <th class="text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                <?php foreach ($events as $event): ?>
+                <tr>
+                  <td><?= htmlspecialchars($event['title']) ?></td>
+                  <td><?= htmlspecialchars($event['event_date']) ?></td>
+                  <td><?= htmlspecialchars($event['event_time']) ?></td>
+                  <td><?= htmlspecialchars($event['location']) ?></td>
+                  <td><?= htmlspecialchars($event['organization']) ?></td>
+                  <td><?= htmlspecialchars($event['event_type']) ?></td>
+                  <td><?= $event['is_volunteer'] ? 'Yes' : 'No' ?></td>
+                  <td class="text-right">
+                    <div class="button-group">
+                      <button class="icon-button edit-event" data-id="<?= $event['id'] ?>"><i class="fas fa-edit"></i></button>
+                      <button class="icon-button delete-event" data-id="<?= $event['id'] ?>"><i class="fas fa-trash"></i></button>
+                    </div>
+                  </td>
+                </tr>
+                <?php endforeach; ?>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Dashboard Content -->
       <div class="content" id="dashboard-content">
         <div class="page-header">
           <h1>Dashboard</h1>
@@ -184,7 +321,8 @@ $stmt->closeCursor();
         </div>
       </div>
 
-      <!-- Users Content -->
+
+<!-- Users Content -->
       <div class="content hidden" id="users-content">
         <div class="page-header">
           <h1>Manage Users</h1>
@@ -204,7 +342,7 @@ $stmt->closeCursor();
             <button class="tab-button" data-tab="regular-users">Regular Users</button>
           </div>
 
-          <!-- All Users Tab -->
+<!-- All Users Tab -->
           <div class="tab-content active" id="all-users-tab">
             <div class="card">
               <div class="card-header">
@@ -253,7 +391,7 @@ $stmt->closeCursor();
       </div>
     </main>
   </div>
-
+     
   <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
   <script src="admin.js"></script>
 </body>
